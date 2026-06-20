@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golf Stat Tracker</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-input: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-green: #22c55e;
+            --text-dark: #0f172a;
+            --border-radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+        body { background-color: var(--bg-primary); color: var(--text-main); padding: 16px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        main { width: 100%; max-width: 480px; }
+        header { margin-bottom: 24px; text-align: center; }
+        h1 { font-size: 1.5rem; }
+
+        /* STATS GRID */
+        .stats-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+        .stat-card { background-color: var(--bg-surface); border-radius: var(--border-radius); padding: 16px; flex: 1 1 calc(50% - 6px); display: flex; flex-direction: column; align-items: center; }
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+        .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--accent-green); }
+
+        /* FORM STYLES */
+        .entry-form { background-color: var(--bg-surface); border-radius: var(--border-radius); padding: 20px; }
+        .form-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 1px solid var(--bg-input); padding-bottom: 12px; }
+        .hole-selector { font-size: 1.25rem; font-weight: 700; }
+        .par-indicator { color: var(--text-muted); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 0.85rem; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; }
+
+        /* COUNTERS */
+        .counter-container { display: flex; align-items: center; justify-content: space-between; background-color: var(--bg-input); border-radius: var(--border-radius); padding: 6px; }
+        .counter-btn { background: none; border: none; color: var(--text-main); font-size: 1.5rem; width: 44px; height: 44px; cursor: pointer; border-radius: 50%; }
+        .counter-btn:active { background-color: rgba(255, 255, 255, 0.1); }
+        .counter-value { font-size: 1.5rem; font-weight: 700; }
+
+        /* SEGMENTED CONTROL */
+        .segmented-control { display: flex; background-color: var(--bg-input); border-radius: var(--border-radius); padding: 4px; gap: 4px; }
+        .segmented-control input[type="radio"] { display: none; }
+        .segmented-control label { flex: 1; text-align: center; padding: 12px; cursor: pointer; border-radius: 8px; font-weight: 600; }
+        .segmented-control input[type="radio"]:checked + label { background-color: var(--accent-green); color: var(--text-dark); }
+
+        .submit-btn { width: 100%; background-color: var(--accent-green); color: var(--text-dark); border: none; border-radius: var(--border-radius); padding: 16px; font-size: 1rem; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <main>
+        <header>
+            <h1>Round Dashboard</h1>
+        </header>
+
+        <!-- Dynamic Live Stats Display -->
+        <section class="stats-grid">
+            <div class="stat-card"><span class="stat-label">Total Score</span><span class="stat-value" id="display-score">E</span></div>
+            <div class="stat-card"><span class="stat-label">Fairways</span><span class="stat-value" id="display-fwy">0%</span></div>
+            <div class="stat-card"><span class="stat-label">GIR</span><span class="stat-value" id="display-gir">0%</span></div>
+            <div class="stat-card"><span class="stat-label">Avg Putts</span><span class="stat-value" id="display-putts">0.0</span></div>
+        </section>
+
+        <!-- Interactive Form -->
+        <form class="entry-form" id="hole-form">
+            <div class="form-header">
+                <span class="hole-selector" id="current-hole-title">Hole 1</span>
+                <span class="par-indicator" id="current-par-title">Par 4</span>
+            </div>
+
+            <div class="form-group">
+                <label>Strokes</label>
+                <div class="counter-container">
+                    <button type="button" class="counter-btn" onclick="adjustValue('strokes', -1)">&minus;</button>
+                    <span class="counter-value" id="val-strokes">4</span>
+                    <button type="button" class="counter-btn" onclick="adjustValue('strokes', 1)">&plus;</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Putts</label>
+                <div class="counter-container">
+                    <button type="button" class="counter-btn" onclick="adjustValue('putts', -1)">&minus;</button>
+                    <span class="counter-value" id="val-putts">2</span>
+                    <button type="button" class="counter-btn" onclick="adjustValue('putts', 1)">&plus;</button>
+                </div>
+            </div>
+
+            <div class="form-group" id="fwy-group">
+                <label>Fairway Accuracy</label>
+                <div class="segmented-control">
+                    <input type="radio" id="miss-left" name="fairway" value="left">
+                    <label for="miss-left">Left</label>
+                    <input type="radio" id="hit-hit" name="fairway" value="hit" checked>
+                    <label for="hit-hit">Hit</label>
+                    <input type="radio" id="miss-right" name="fairway" value="right">
+                    <label for="miss-right">Right</label>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Save & Next Hole</button>
+        </form>
+    </main>
+
+    <script>
+        // Core Course Configuration
+        const courseRouting = [
+            { hole: 1, par: 4 }, { hole: 2, par: 3 }, { hole: 3, par: 5 },
+            { hole: 4, par: 4 }, { hole: 5, par: 4 }, { hole: 6, par: 3 },
+            { hole: 7, par: 4 }, { hole: 8, par: 5 }, { hole: 9, par: 4 }
+        ];
+
+        let currentHoleIndex = 0;
+        let roundLog = [];
+        let currentInputs = { strokes: 4, putts: 2 };
+
+        // Increments and Decrements score inputs
+        function adjustValue(field, amount) {
+            currentInputs[field] = Math.max(1, currentInputs[field] + amount);
+            document.getElementById(`val-${field}`).innerText = currentInputs[field];
+        }
+
+        // Refreshes UI with the active hole parameters
+        function updateFormLayout() {
+            const activeHole = courseRouting[currentHoleIndex];
+            document.getElementById('current-hole-title').innerText = `Hole ${activeHole.hole}`;
+            document.getElementById('current-par-title').innerText = `Par ${activeHole.par}`;
+            
+            // Auto hide fairway selectors on Par 3 holes
+            const fwyGroup = document.getElementById('fwy-group');
+            fwyGroup.style.display = (activeHole.par === 3) ? 'none' : 'block';
+
+            // Seed intuitive baseline values
+            currentInputs = { strokes: activeHole.par, putts: 2 };
+            document.getElementById('val-strokes').innerText = currentInputs.strokes;
+            document.getElementById('val-putts').innerText = currentInputs.putts;
+        }
+
+        // Live calculation engine for overall metrics
+        function processCalculations() {
+            let totalStrokes = 0, totalPar = 0, totalPutts = 0;
+            let fwyOpportunities = 0, fwyHits = 0, girHits = 0;
+
+            roundLog.forEach(entry => {
+                totalStrokes += entry.strokes;
+                totalPar += entry.par;
+                totalPutts += entry.putts;
+
+                // Greens in Regulation Calculation
+                if ((entry.strokes - entry.putts) <= (entry.par - 2)) {
+                    girHits++;
+                }
+
+                // Fairway Driving Accuracy Calculation
+                if (entry.par > 3) {
+                    fwyOpportunities++;
+                    if (entry.fairway === 'hit') fwyHits++;
+                }
+            });
+
+            const relativeToPar = totalStrokes - totalPar;
+            document.getElementById('display-score').innerText = relativeToPar === 0 ? 'E' : (relativeToPar > 0 ? `+${relativeToPar}` : relativeToPar);
+            document.getElementById('display-fwy').innerText = fwyOpportunities ? `${Math.round((fwyHits / fwyOpportunities) * 100)}%` : '—';
+            document.getElementById('display-gir').innerText = roundLog.length ? `${Math.round((girHits / roundLog.length) * 100)}%` : '0%';
+            document.getElementById('display-putts').innerText = roundLog.length ? (totalPutts / roundLog.length).toFixed(1) : '0.0';
+        }
+
+        // Listens for hole logs and saves to phone storage
+        document.getElementById('hole-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const activeHole = courseRouting[currentHoleIndex];
+            const selectedFwy = document.querySelector('input[name="fairway"]:checked').value;
+
+            roundLog.push({
+                hole: activeHole.hole,
+                par: activeHole.par,
+                strokes: currentInputs.strokes,
+                putts: currentInputs.putts,
+                fairway: activeHole.par === 3 ? null : selectedFwy
+            });
+
+            processCalculations();
+            currentHoleIndex++;
+
+            if (currentHoleIndex < courseRouting.length) {
+                updateFormLayout();
+            } else {
+                // Permanently cache the finished round array into the browser memory
+                const savedRounds = JSON.parse(localStorage.getItem('golfRounds') || '[]');
+                savedRounds.push({
